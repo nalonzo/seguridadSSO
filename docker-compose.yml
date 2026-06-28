@@ -1,0 +1,38 @@
+networks:
+  seguridad_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+services:
+  server:
+    build: ./server
+    container_name: server_seguridad
+    hostname: server
+    networks:
+      seguridad_net:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "2222:22"      # SSH
+      - "2121:21"      # FTP
+      - "2323:23"      # Telnet
+      - "8080:80"      # Apache (phpMyAdmin y script login)
+    # Opcional: volumen para persistencia
+    # volumes:
+    #   - ./server/www:/var/www/html
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+
+  client:
+    build: ./client
+    container_name: cliente_seguridad
+    hostname: client
+    networks:
+      seguridad_net:
+        ipv4_address: 172.20.0.20
+    # No exponemos puertos al host, solo red interna
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
