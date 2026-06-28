@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     nmap \
     hydra \
     hping3 \
+    slowhttptest \
     pssh \
     wget \
     curl \
@@ -18,6 +19,10 @@ RUN apt-get update && apt-get install -y \
 # Instalar GoldenEye (herramienta DoS)
 RUN git clone https://github.com/jseidl/GoldenEye.git /opt/goldeneye && \
     chmod +x /opt/goldeneye/goldeneye.py
+
+# Instalar slowloris desde su repositorio oficial
+RUN git clone https://github.com/gkbrk/slowloris.git /opt/slowloris && \
+    chmod +x /opt/slowloris/slowloris.py
 
 WORKDIR /root
 

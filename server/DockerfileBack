@@ -6,8 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     openssh-server \
     vsftpd \
-    telnetd \
-    openbsd-inetd \
     apache2 \
     libapache2-mod-php \
     php-mysql \
@@ -38,35 +36,26 @@ RUN echo "anonymous_enable=NO" >> /etc/vsftpd.conf && \
     echo "pam_service_name=vsftpd" >> /etc/vsftpd.conf && \
     echo "userlist_enable=YES" >> /etc/vsftpd.conf && \
     echo "userlist_deny=NO" >> /etc/vsftpd.conf && \
-    echo "userlist_file=/etc/vsftpd.userlist" && \
+    echo "userlist_file=/etc/vsftpd.userlist" >> /etc/vsftpd.conf && \
     echo "root" >> /etc/vsftpd.userlist
-
-# Configurar Telnet (se activa automáticamente en inetd, pero aseguramos que esté habilitado)
-RUN sed -i 's/^#telnet/telnet/' /etc/inetd.conf || true
 
 # Configurar Apache y PHP
 RUN a2enmod auth_basic && \
     a2enmod php8.2 && \
     a2enmod rewrite
-
-# Copiar script de login y archivos de autenticación básica
 COPY script_login.php /var/www/html/
-RUN mkdir -p /var/www/html/privado
-RUN touch /var/www/html/privado/.htaccess
-RUN touch /var/www/html/privado/.htpasswd
-RUN chown -R www-data:www-data /var/www/html/privado
+RUN mkdir /var/www/html/privado
+RUN touch /var/www/html/.htaccess
+RUN touch /var/www/html/.htpasswd
 
+# Configurar AuthType Basic
 RUN echo 'AuthType Basic' >> /var/www/html/.htaccess && \
     echo 'AuthName "Acceso restringido"'>> /var/www/html/.htaccess  && \
     echo 'AuthUserFile' >> /var/www/html/privado/.htpasswd && \
     echo 'Require valid-user' >> /var/www/html/.htaccess
 
-
-#Crear el usuario de prueba
-RUN htpasswd -bc /var/www/html/privado/.htpasswd prueba prueba123
-
-
-# Configurar phpMyAdmin (acceso root con contraseña)
+# Configurar phpMyAdmin (acceso root público)
+# Respondemos a las preguntas de configuración con debconf
 RUN echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections && \
     echo "phpmyadmin phpmyadmin/app-password-confirm password root" | debconf-set-selections && \
     echo "phpmyadmin phpmyadmin/mysql/admin-pass password root" | debconf-set-selections && \
@@ -74,18 +63,20 @@ RUN echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-sel
     echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | debconf-set-selections && \
     dpkg-reconfigure -f noninteractive phpmyadmin
 
-# Sobrescribir la configuración de phpMyAdmin con la personalizada
-COPY config.inc.php /etc/phpmyadmin/config.inc.php
+# Copiar configuración de phpMyAdmin para permitir root sin contraseña (opcional)
+RUN sed -i "s/\$cfg\['Servers'\]\[\$i\]\['AllowNoPassword'\] = false;/\$cfg['Servers'][\$i]['AllowNoPassword'] = true;/" /etc/phpmyadmin/config.inc.php
 
-# Configurar fail2ban para SSH
+# Configurar fail2ban para SSH (básico)
 RUN cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local && \
     sed -i 's/^enabled = false/enabled = true/' /etc/fail2ban/jail.local && \
     sed -i 's/^\[sshd\]/[sshd]\nenabled = true/' /etc/fail2ban/jail.local
 
-# Copiar script de entrada (con permisos de ejecución)
+# Copiar script de entrada
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Exponer puertos
 EXPOSE 22 21 23 80
 
+# Iniciar servicios con supervisord o script
 ENTRYPOINT ["/entrypoint.sh"]

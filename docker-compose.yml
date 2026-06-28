@@ -21,6 +21,9 @@ services:
     # Opcional: volumen para persistencia
     # volumes:
     #   - ./server/www:/var/www/html
+    volumes:
+      - html_data:/var/www/html     # Volumen nombrado para archivos HTML
+      - mysql_data:/var/lib/mysql   # Volumen nombrado para base de datos
     restart: unless-stopped
     tty: true
     stdin_open: true
@@ -36,3 +39,6 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
+volumes:
+  html_data:    # Declaración del volumen para HTML
+  mysql_data:   # Declaración del volumen para MySQL
