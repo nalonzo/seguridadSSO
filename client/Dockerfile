@@ -3,6 +3,11 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
+    netcat-openbsd \
+    socat \
+    bind9-dnsutils \
+    dnsrecon \
+    dnsmap \
     openssh-client \
     ftp \
     nmap \
@@ -14,8 +19,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     python3 \
-    netcat-openbsd \
-    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar GoldenEye (herramienta DoS)
